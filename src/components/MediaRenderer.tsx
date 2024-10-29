@@ -1,11 +1,5 @@
-import { useState, useRef, useEffect } from "preact/hooks";
-
-// Basic image loading states
-interface MediaRendererState {
-  isLoading: boolean;
-  hasError: boolean;
-}
-import { Box, Typography, CircularProgress, Modal } from "@mui/joy";
+import { Box, Typography } from "@mui/joy";
+import { match } from "ts-pattern";
 import { MediaContent } from "../types/reading";
 
 interface MediaRendererProps {
@@ -13,53 +7,30 @@ interface MediaRendererProps {
 }
 
 export const MediaRenderer = ({ media }: MediaRendererProps) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
+  const { url, type, alt, caption, width, height } = media;
 
-  useEffect(() => {
-    const img = new Image();
-    img.src = media.url;
-    img.onload = () => {
-      console.log("Media loaded successfully:", media.url);
-      setIsLoading(false);
-    };
-    img.onerror = (error) => {
-      console.error("Media failed to load:", media.url, error);
-      setHasError(true);
-      setIsLoading(false);
-    };
-  }, [media.url]);
-
-  const commonProps = {
-    alt: media.alt || media.caption || "",
-    style: {
-      maxWidth: media.width || "100%",
-      height: media.height || "auto",
-      borderRadius: "8px",
-    },
+  const commonStyles = {
+    width: "100%",
+    maxWidth: width || "100%",
+    height: height || "auto",
+    borderRadius: "8px",
+    objectFit: "contain",
   };
 
-  const renderMedia = () => {
-    switch (media.type) {
-      case "image":
-        return <img src={media.url} {...commonProps} />;
-      case "video":
-        return (
-          <video
-            controls
-            {...commonProps}
-            style={{ ...commonProps.style, backgroundColor: "#000" }}
-          >
-            <source src={media.url} type="video/mp4" />
-            Your browser does not support the video tag.
-          </video>
-        );
-      case "gif":
-        return <img src={media.url} {...commonProps} />;
-      default:
-        return null;
-    }
-  };
+  const imageAlt = alt || caption || "";
+
+  const renderMedia = () =>
+    match(type)
+      .with("video", () => (
+        <video controls style={{ ...commonStyles, backgroundColor: "#000" }}>
+          <source src={url} type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      ))
+      .with("image", "gif", () => (
+        <img src={url} alt={imageAlt} style={commonStyles} />
+      ))
+      .otherwise(() => null);
 
   return (
     <Box sx={{ my: 2 }}>
@@ -68,17 +39,16 @@ export const MediaRenderer = ({ media }: MediaRendererProps) => {
           display: "flex",
           justifyContent: "center",
           overflow: "hidden",
-          borderRadius: "8px",
         }}
       >
         {renderMedia()}
       </Box>
-      {media.caption && (
+      {caption && (
         <Typography
           level="body-sm"
           sx={{ textAlign: "center", mt: 1, color: "text.secondary" }}
         >
-          {media.caption}
+          {caption}
         </Typography>
       )}
     </Box>
