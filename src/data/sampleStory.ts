@@ -1,7 +1,10 @@
 import { ReadingContent } from "../types/reading";
 
 export const sampleStory: ReadingContent = {
+  id: "tommys-first-day",
   title: "Tommy's First Day at Programming Club",
+  category: "Programming",
+  tags: ["coding", "algorithms", "Scratch"],
   sections: [
     {
       id: "intro",
@@ -48,6 +51,13 @@ export const sampleStory: ReadingContent = {
           type: "gif",
           url: "https://media1.tenor.com/m/zlKoX5HPPu8AAAAC/cat-annoyed.gif",
           caption: "The cat sprite dancing across the screen",
+          alt: "Animated GIF showing a Scratch cat sprite dancing",
+          width: 400,
+        },
+        {
+          type: "video",
+          url: "https://www.youtube.com/embed/il23o-rqSiY?si=8x1qjSlq0vdbd0Da",
+          caption: "foo",
           alt: "Animated GIF showing a Scratch cat sprite dancing",
           width: 400,
         },

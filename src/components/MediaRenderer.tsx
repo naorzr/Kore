@@ -1,6 +1,6 @@
 import { Box, Typography } from "@mui/joy";
 import { match } from "ts-pattern";
-import { MediaContent } from "../types/reading";
+import { MediaContent } from "../types/media";
 
 interface MediaRendererProps {
   media: MediaContent;

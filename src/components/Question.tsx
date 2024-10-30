@@ -1,6 +1,8 @@
+// Question.tsx
 import { Alert, Button, Radio, RadioGroup, Sheet, Typography } from "@mui/joy";
 import { useState } from "preact/hooks";
 import { ReadingQuestion } from "../types/reading";
+import { match } from "ts-pattern";
 
 interface QuestionProps {
   question: ReadingQuestion;
@@ -19,6 +21,15 @@ export function Question({ question, onComplete }: QuestionProps) {
 
     if (correct) {
       setTimeout(() => onComplete(question.id), 2000);
+    }
+  };
+
+  const handleChange = (value: string) => {
+    if (isCorrect) return;
+    setSelected(value);
+    if (hasSubmitted) {
+      setHasSubmitted(false);
+      setIsCorrect(null);
     }
   };
 
@@ -42,19 +53,7 @@ export function Question({ question, onComplete }: QuestionProps) {
 
       <RadioGroup
         value={selected}
-        onChange={(e) => {
-          // Prevent changing the selection after a correct answer
-          if (isCorrect) {
-            return;
-          }
-          setSelected(e.currentTarget.value);
-
-          // Reset submission state if the user changes their answer
-          if (hasSubmitted) {
-            setHasSubmitted(false);
-            setIsCorrect(null);
-          }
-        }}
+        onChange={(event) => handleChange(event.currentTarget.value)}
       >
         {question.choices?.map((option) => (
           <Radio
@@ -84,19 +83,21 @@ export function Question({ question, onComplete }: QuestionProps) {
           color={isCorrect ? "success" : "warning"}
           sx={{ mt: 2 }}
         >
-          {isCorrect ? (
-            <>
-              <Typography level="title-sm">Correct! 🎉</Typography>
-              <Typography level="body-sm">{question.explanation}</Typography>
-            </>
-          ) : (
-            <>
-              <Typography level="title-sm">Try again! 💭</Typography>
-              <Typography level="body-sm">
-                Think carefully about what happened in the story.
-              </Typography>
-            </>
-          )}
+          {match(isCorrect)
+            .with(true, () => (
+              <>
+                <Typography level="title-sm">Correct! 🎉</Typography>
+                <Typography level="body-sm">{question.explanation}</Typography>
+              </>
+            ))
+            .otherwise(() => (
+              <>
+                <Typography level="title-sm">Try again! 💭</Typography>
+                <Typography level="body-sm">
+                  Think carefully about what happened in the story.
+                </Typography>
+              </>
+            ))}
         </Alert>
       )}
     </Sheet>

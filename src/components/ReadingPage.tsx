@@ -1,112 +1,114 @@
-import { useState, useEffect, useMemo } from "preact/hooks";
-
-import { MediaRenderer } from "./MediaRenderer";
-
+// ReadingPage.tsx
 import {
   Box,
   Sheet,
   Typography,
   IconButton,
   LinearProgress,
-  useColorScheme,
   Button,
 } from "@mui/joy";
 import DarkModeRoundedIcon from "@mui/icons-material/DarkModeRounded";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
-import { Question } from "./Question";
+import { useColorScheme } from "@mui/joy/styles";
+import { atom, useAtom } from "jotai";
 import { ReadingContent } from "../types/reading";
+import { MediaRenderer } from "./MediaRenderer";
+import { Question } from "./Question";
+import { useEffect, useRef } from "preact/hooks";
 
-interface CompletedQuestion {
-  id: string;
-  sectionId: string;
-  completedAt: Date;
-}
-
-type CompletedQuestionsSet = Set<CompletedQuestion["id"]>;
+// Define atoms outside the component
+const timeSpentAtom = atom(0);
+const completedQuestionsAtom = atom<Set<string>>(new Set<string>());
+const isSubmittingAtom = atom(false);
+const scrollProgressAtom = atom(0);
 
 interface ReadingPageProps {
   content: ReadingContent;
   onComplete: (readingId: string) => void;
 }
 
-const ERROR_MESSAGES = {
-  COMPLETION_FAILED: "Failed to mark reading as complete. Please try again.",
-  STORAGE_FAILED: "Failed to save your progress locally.",
-} as const;
-
-type ErrorType = keyof typeof ERROR_MESSAGES;
-
-const handleError = (error: unknown, type: ErrorType) => {
-  console.error(`${ERROR_MESSAGES[type]}:`, error);
-};
-
 export const ReadingPage = ({ content, onComplete }: ReadingPageProps) => {
-  const [timeSpent, setTimeSpent] = useState(0);
-  const [scrollProgress, setScrollProgress] = useState(0);
-  const [completedQuestions, setCompletedQuestions] =
-    useState<CompletedQuestionsSet>(new Set());
+  const [timeSpent, setTimeSpent] = useAtom(timeSpentAtom);
+  const [completedQuestions, setCompletedQuestions] = useAtom(
+    completedQuestionsAtom,
+  );
+  const [isSubmitting, setIsSubmitting] = useAtom(isSubmittingAtom);
+  const [scrollProgress, setScrollProgress] = useAtom(scrollProgressAtom);
   const { mode, setMode } = useColorScheme();
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Calculate total number of questions across all sections
-  const totalQuestions = useMemo(
-    () =>
-      content.sections.reduce(
-        (total, section) => total + (section.questions?.length || 0),
-        0,
-      ),
-    [content.sections],
+  const totalQuestions = content.sections.reduce(
+    (total, section) => total + (section.questions?.length || 0),
+    0,
   );
 
-  // Track reading completion status based on answered questions
-  const isDoneEnabled = useMemo(
-    () => completedQuestions.size === totalQuestions && !isSubmitting,
-    [completedQuestions.size, totalQuestions, isSubmitting],
-  );
+  const isDoneEnabled =
+    completedQuestions.size === totalQuestions && !isSubmitting;
 
   const handleDone = async () => {
-    // Store completion in localStorage
-    const storedReadings = localStorage.getItem("completedReadings");
-    const completedReadings = storedReadings ? JSON.parse(storedReadings) : [];
-    localStorage.setItem(
-      "completedReadings",
-      JSON.stringify([
-        ...completedReadings,
-        {
-          title: content.title,
-          completedAt: new Date().toISOString(),
-          questionsCompleted: Array.from(completedQuestions),
-        },
-      ]),
-    );
-
     if (isSubmitting) return;
 
     setIsSubmitting(true);
     try {
-      await onComplete(content.title);
+      const storedReadings = JSON.parse(
+        localStorage.getItem("completedReadings") || "[]",
+      );
+      localStorage.setItem(
+        "completedReadings",
+        JSON.stringify([
+          ...storedReadings,
+          {
+            title: content.title,
+            completedAt: new Date().toISOString(),
+            questionsCompleted: Array.from(completedQuestions),
+          },
+        ]),
+      );
+      return onComplete(content.title);
+    } catch (error) {
+      console.error("Failed to mark reading as complete:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Timer effect
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeSpent((prev) => prev + 1);
     }, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
-  const handleScroll = (e: Event) => {
-    const target = e.target as HTMLDivElement;
-    const scrollPercentage =
-      (target.scrollTop / (target.scrollHeight - target.clientHeight)) * 100;
-    setScrollProgress(Math.min(100, Math.max(0, scrollPercentage)));
-  };
+    // Cleanup function to clear the interval on unmount
+    return () => clearInterval(timer);
+  }, [setTimeSpent]);
+
+  // Scroll progress effect
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (contentRef.current) {
+        const { scrollTop, scrollHeight, clientHeight } = contentRef.current;
+        const scrollPercentage =
+          (scrollTop / (scrollHeight - clientHeight)) * 100;
+        setScrollProgress(Math.min(100, Math.max(0, scrollPercentage)));
+      }
+    };
+
+    const currentRef = contentRef.current;
+    if (currentRef) {
+      currentRef.addEventListener("scroll", handleScroll);
+    }
+
+    // Cleanup function to remove the event listener
+    return () => {
+      if (currentRef) {
+        currentRef.removeEventListener("scroll", handleScroll);
+      }
+    };
+  }, [setScrollProgress]);
 
   const handleQuestionComplete = (questionId: string) => {
-    setCompletedQuestions((prev) => new Set([...prev, questionId]));
+    setCompletedQuestions((prev) => new Set(prev).add(questionId));
   };
 
   return (
@@ -118,6 +120,7 @@ export const ReadingPage = ({ content, onComplete }: ReadingPageProps) => {
           zIndex: 20,
           p: 2,
           borderRadius: "lg",
+          bgcolor: "background.surface",
         }}
       >
         <Box
@@ -165,22 +168,23 @@ export const ReadingPage = ({ content, onComplete }: ReadingPageProps) => {
           borderRadius: "lg",
           height: "calc(100vh - 160px)",
           overflowY: "auto",
+          scrollbarWidth: "thin",
           "&::-webkit-scrollbar": {
             width: "12px",
           },
           "&::-webkit-scrollbar-track": {
-            bgcolor: "background.level1",
+            backgroundColor: "background.level1",
             borderRadius: "8px",
           },
           "&::-webkit-scrollbar-thumb": {
-            bgcolor: "primary.softBg",
+            backgroundColor: "primary.softBg",
             borderRadius: "8px",
             "&:hover": {
-              bgcolor: "primary.softHoverBg",
+              backgroundColor: "primary.softHoverBg",
             },
           },
         }}
-        onScroll={handleScroll}
+        ref={contentRef}
       >
         <Typography level="h1" sx={{ mb: 4 }}>
           {content.title}
@@ -206,15 +210,13 @@ export const ReadingPage = ({ content, onComplete }: ReadingPageProps) => {
               />
             ))}
 
-            {section.questions?.map((question) => {
-              return (
-                <Question
-                  key={question.id}
-                  question={question}
-                  onComplete={handleQuestionComplete}
-                />
-              );
-            })}
+            {section.questions?.map((question) => (
+              <Question
+                key={question.id}
+                question={question}
+                onComplete={handleQuestionComplete}
+              />
+            ))}
           </Box>
         ))}
 
