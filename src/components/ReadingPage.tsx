@@ -15,9 +15,50 @@ import { ReadingContent } from "../types/reading";
 import { MediaRenderer } from "./MediaRenderer";
 import { Question } from "./Question";
 import { useEffect, useRef } from "preact/hooks";
+import { RefObject } from "preact";
+import { memo } from "preact/compat";
 
 // Define atoms outside the component
-const timeSpentAtom = atom(0);
+
+const Progress = memo(
+  ({ contentRef }: { contentRef: RefObject<HTMLDivElement> }) => {
+    const [scrollProgress, setScrollProgress] = useAtom(scrollProgressAtom);
+
+    useEffect(() => {
+      const handleScroll = () => {
+        if (contentRef.current) {
+          const { scrollTop, scrollHeight, clientHeight } = contentRef.current;
+          const scrollPercentage =
+            (scrollTop / (scrollHeight - clientHeight)) * 100;
+          setScrollProgress(Math.min(100, Math.max(0, scrollPercentage)));
+        }
+      };
+
+      const currentRef = contentRef.current;
+      if (currentRef) {
+        currentRef.addEventListener("scroll", handleScroll);
+      }
+
+      // Cleanup function to remove the event listener
+      return () => {
+        if (currentRef) {
+          currentRef.removeEventListener("scroll", handleScroll);
+        }
+      };
+    }, [setScrollProgress]);
+
+    return (
+      <LinearProgress
+        determinate
+        value={scrollProgress}
+        variant="soft"
+        size="lg"
+        sx={{ "--LinearProgress-radius": "8px" }}
+      />
+    );
+  },
+);
+
 const completedQuestionsAtom = atom<Set<string>>(new Set<string>());
 const isSubmittingAtom = atom(false);
 const scrollProgressAtom = atom(0);
@@ -28,12 +69,10 @@ interface ReadingPageProps {
 }
 
 export const ReadingPage = ({ content, onComplete }: ReadingPageProps) => {
-  const [timeSpent, setTimeSpent] = useAtom(timeSpentAtom);
   const [completedQuestions, setCompletedQuestions] = useAtom(
     completedQuestionsAtom,
   );
   const [isSubmitting, setIsSubmitting] = useAtom(isSubmittingAtom);
-  const [scrollProgress, setScrollProgress] = useAtom(scrollProgressAtom);
   const { mode, setMode } = useColorScheme();
 
   const totalQuestions = content.sections.reduce(
@@ -71,41 +110,8 @@ export const ReadingPage = ({ content, onComplete }: ReadingPageProps) => {
     }
   };
 
-  // Timer effect
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeSpent((prev) => prev + 1);
-    }, 1000);
-
-    // Cleanup function to clear the interval on unmount
-    return () => clearInterval(timer);
-  }, [setTimeSpent]);
-
   // Scroll progress effect
   const contentRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (contentRef.current) {
-        const { scrollTop, scrollHeight, clientHeight } = contentRef.current;
-        const scrollPercentage =
-          (scrollTop / (scrollHeight - clientHeight)) * 100;
-        setScrollProgress(Math.min(100, Math.max(0, scrollPercentage)));
-      }
-    };
-
-    const currentRef = contentRef.current;
-    if (currentRef) {
-      currentRef.addEventListener("scroll", handleScroll);
-    }
-
-    // Cleanup function to remove the event listener
-    return () => {
-      if (currentRef) {
-        currentRef.removeEventListener("scroll", handleScroll);
-      }
-    };
-  }, [setScrollProgress]);
 
   const handleQuestionComplete = (questionId: string) => {
     setCompletedQuestions((prev) => new Set(prev).add(questionId));
@@ -131,10 +137,6 @@ export const ReadingPage = ({ content, onComplete }: ReadingPageProps) => {
             mb: 2,
           }}
         >
-          <Typography level="title-lg">
-            Time: {Math.floor(timeSpent / 60)}:
-            {(timeSpent % 60).toString().padStart(2, "0")}
-          </Typography>
           <IconButton
             onClick={() => setMode(mode === "dark" ? "light" : "dark")}
             variant="soft"
@@ -151,13 +153,7 @@ export const ReadingPage = ({ content, onComplete }: ReadingPageProps) => {
           Questions completed: {completedQuestions.size} / {totalQuestions}
         </Typography>
 
-        <LinearProgress
-          determinate
-          value={scrollProgress}
-          variant="soft"
-          size="lg"
-          sx={{ "--LinearProgress-radius": "8px" }}
-        />
+        <Progress contentRef={contentRef} />
       </Sheet>
 
       <Sheet

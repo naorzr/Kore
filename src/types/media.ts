@@ -1,23 +1,20 @@
 // types/media.ts
-export type MediaType = "image" | "video" | "gif" | "embed";
+export type MediaContent = UrlMediaContent | EmbedMediaContent;
 
-export interface MediaSource {
-  url: string;
-  width?: number;
-  height?: number;
-  type?: string;
-  quality?: "low" | "medium" | "high";
-}
-
-export interface MediaContent {
-  type: MediaType;
-  sources?: MediaSource[];
-  url?: string;
+interface BaseMediaContent {
+  type: "image" | "video" | "gif";
   alt?: string;
   caption?: string;
   width?: number;
   height?: number;
-  autoplay?: boolean;
-  loop?: boolean;
-  controls?: boolean;
+}
+
+interface UrlMediaContent extends BaseMediaContent {
+  url: string;
+  embedHtml?: never;
+}
+
+interface EmbedMediaContent extends BaseMediaContent {
+  url?: never;
+  embedHtml: string;
 }

@@ -5,6 +5,7 @@ export const sampleStory: ReadingContent = {
   title: "Tommy's First Day at Programming Club",
   category: "Programming",
   tags: ["coding", "algorithms", "Scratch"],
+  language: "en",
   sections: [
     {
       id: "intro",
@@ -56,10 +57,11 @@ export const sampleStory: ReadingContent = {
         },
         {
           type: "video",
-          url: "https://www.youtube.com/embed/il23o-rqSiY?si=8x1qjSlq0vdbd0Da",
-          caption: "foo",
-          alt: "Animated GIF showing a Scratch cat sprite dancing",
-          width: 400,
+          embedHtml: `<iframe width="560" height="315" src="https://www.youtube.com/embed/AxOjPlHvuaY?si=N_CHM4OszNkZyFFl" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`,
+          caption: "Tommy learns to code",
+          alt: "Video of Tommy learning to code",
+          width: 600,
+          height: 338,
         },
       ],
       questions: [
