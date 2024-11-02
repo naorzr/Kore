@@ -6,7 +6,7 @@ import theme from "./theme/theme";
 import { useState } from "preact/hooks";
 
 export function App() {
-  const [completedReadings, setCompletedReadings] = useState<string[]>([]);
+  const [, setCompletedReadings] = useState<string[]>([]);
   const handleReadingComplete = (readingTitle: string) => {
     setCompletedReadings((prev) => [...prev, readingTitle]);
     // You might want to save this to localStorage or your backend
