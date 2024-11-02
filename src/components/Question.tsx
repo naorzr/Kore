@@ -1,4 +1,4 @@
-// Question.tsx
+// components/Question.tsx
 import { Alert, Button, Radio, RadioGroup, Sheet, Typography } from "@mui/joy";
 import { useState } from "preact/hooks";
 import { ReadingQuestion } from "../types/reading";
@@ -7,19 +7,24 @@ import { match } from "ts-pattern";
 interface QuestionProps {
   question: ReadingQuestion;
   onComplete: (questionId: string) => void;
+  onScore: (points: number) => void; // New prop for scoring
 }
 
-export function Question({ question, onComplete }: QuestionProps) {
+export function Question({ question, onComplete, onScore }: QuestionProps) {
   const [selected, setSelected] = useState<string>("");
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const [attempts, setAttempts] = useState(0);
 
   const handleSubmit = () => {
     setHasSubmitted(true);
+    setAttempts(attempts + 1);
     const correct = selected === question.correctAnswer;
     setIsCorrect(correct);
 
     if (correct) {
+      const points = attempts === 0 ? 10 : 5; // Award points
+      onScore(points);
       setTimeout(() => onComplete(question.id), 2000);
     }
   };
@@ -55,7 +60,7 @@ export function Question({ question, onComplete }: QuestionProps) {
         value={selected}
         onChange={(event) => handleChange(event.currentTarget.value)}
       >
-        {question.choices?.map((option) => (
+        {question.choices.map((option) => (
           <Radio
             key={option}
             value={option}
