@@ -1,67 +1,13 @@
 // ReadingPage.tsx
-import {
-  Box,
-  Sheet,
-  Typography,
-  IconButton,
-  LinearProgress,
-  Button,
-} from "@mui/joy";
+import { Box, Sheet, Typography, IconButton, Button } from "@mui/joy";
 import DarkModeRoundedIcon from "@mui/icons-material/DarkModeRounded";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import { useColorScheme } from "@mui/joy/styles";
-import { atom, useAtom } from "jotai";
+import { useState, useRef } from "preact/hooks";
 import { ReadingContent } from "../types/reading";
 import { MediaRenderer } from "./MediaRenderer";
 import { Question } from "./Question";
-import { useEffect, useRef } from "preact/hooks";
-import { RefObject } from "preact";
-import { memo } from "preact/compat";
-
-// Define atoms outside the component
-
-const Progress = memo(
-  ({ contentRef }: { contentRef: RefObject<HTMLDivElement> }) => {
-    const [scrollProgress, setScrollProgress] = useAtom(scrollProgressAtom);
-
-    useEffect(() => {
-      const handleScroll = () => {
-        if (contentRef.current) {
-          const { scrollTop, scrollHeight, clientHeight } = contentRef.current;
-          const scrollPercentage =
-            (scrollTop / (scrollHeight - clientHeight)) * 100;
-          setScrollProgress(Math.min(100, Math.max(0, scrollPercentage)));
-        }
-      };
-
-      const currentRef = contentRef.current;
-      if (currentRef) {
-        currentRef.addEventListener("scroll", handleScroll);
-      }
-
-      // Cleanup function to remove the event listener
-      return () => {
-        if (currentRef) {
-          currentRef.removeEventListener("scroll", handleScroll);
-        }
-      };
-    }, [setScrollProgress]);
-
-    return (
-      <LinearProgress
-        determinate
-        value={scrollProgress}
-        variant="soft"
-        size="lg"
-        sx={{ "--LinearProgress-radius": "8px" }}
-      />
-    );
-  },
-);
-
-const completedQuestionsAtom = atom<Set<string>>(new Set<string>());
-const isSubmittingAtom = atom(false);
-const scrollProgressAtom = atom(0);
+import { Progress } from "./Progress";
 
 interface ReadingPageProps {
   content: ReadingContent;
@@ -69,10 +15,10 @@ interface ReadingPageProps {
 }
 
 export const ReadingPage = ({ content, onComplete }: ReadingPageProps) => {
-  const [completedQuestions, setCompletedQuestions] = useAtom(
-    completedQuestionsAtom,
+  const [completedQuestions, setCompletedQuestions] = useState<Set<string>>(
+    new Set(),
   );
-  const [isSubmitting, setIsSubmitting] = useAtom(isSubmittingAtom);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { mode, setMode } = useColorScheme();
 
   const totalQuestions = content.sections.reduce(
@@ -102,7 +48,7 @@ export const ReadingPage = ({ content, onComplete }: ReadingPageProps) => {
           },
         ]),
       );
-      return onComplete(content.title);
+      onComplete(content.title);
     } catch (error) {
       console.error("Failed to mark reading as complete:", error);
     } finally {
@@ -110,11 +56,10 @@ export const ReadingPage = ({ content, onComplete }: ReadingPageProps) => {
     }
   };
 
-  // Scroll progress effect
   const contentRef = useRef<HTMLDivElement>(null);
 
   const handleQuestionComplete = (questionId: string) => {
-    setCompletedQuestions((prev) => new Set(prev).add(questionId));
+    setCompletedQuestions((prev) => new Set([...prev, questionId]));
   };
 
   return (
